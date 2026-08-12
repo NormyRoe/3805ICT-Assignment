@@ -238,6 +238,109 @@ class PriorityQueue():
 
 
 ###############################################################################################
+# Class: HeapNode
+# Description:
+# Represents a single node in a Fibonacci Heap.
+# Stores the key (distance), the associated intersection, and structural links
+# used by Fibonacci Heap operations such as insert, extract-min, and decrease-key.
+#
+###############################################################################################    
+class HeapNode():
+    def __init__(self, key, value):
+        """
+        Create a new Fibonacci Heap node.
+
+        Parameters:
+            key (float or int):
+                The priority value for this node (used as the heap key).
+            value (Intersection):
+                The intersection object associated with this heap node.
+
+        Attributes:
+            key (float or int):
+                The node's priority value (distance in Dijkstra's Algorithm).
+            value (Intersection):
+                The intersection stored in this heap node.
+            parent (HeapNode or None):
+                The node's parent in the heap tree.
+            child (HeapNode or None):
+                The node's first child in the heap tree.
+            left (HeapNode):
+                The node's left sibling in the circular doubly-linked list.
+            right (HeapNode):
+                The node's right sibling in the circular doubly-linked list.
+            degree (int):
+                The number of children this node has.
+            mark (bool):
+                Indicates whether the node has lost a child since becoming a child itself.
+        """
+
+        self.key = key          # Distance
+        self.value = value       # Intersection object
+        self.parent = None
+        self.child = None
+        self.degree = 0
+        self.left = self
+        self.right = self
+        self.mark = False
+
+
+###############################################################################################
+# Class: FibonacciHeap
+# Description:
+# Creates a Fibonacci Heap.
+# Stores each provided HeapNode object and ensures that the heap maintains balance and integrity
+#
+###############################################################################################    
+class FibonacciHeap():
+    def __init__(self):
+        """
+        Create a new Fibonacci Heap node.
+
+        Attributes:
+            min_node:
+                A pointer to the smallest node in the heap.
+            total_nodes:
+                A count of all nodes currently in the heap
+        """
+
+        self.min_node = None
+        self.total_nodes = 0
+
+    def is_empty(self):
+
+        # Return if the heap is empty
+        return self.min_node is None
+
+    def insert(self, node):
+        pass
+
+    def extract_min(self):
+        pass
+
+    def decrease_key(self, node, new_key):
+        pass
+
+    def _merge_with_root_list(self, node):
+        pass
+
+    def _remove_from_root_list(self, node):
+        pass
+
+    def _link(self, node1, node2):
+        pass
+
+    def _consolidate(self):
+        pass
+
+    def _cut(self, node, parent):
+        pass
+
+    def _cascading_cut(self, node):
+        pass
+
+
+###############################################################################################
 # Function: dijkstra
 # Description:
 # Runs Dijkstra's Algorithm using the Priority Queue
@@ -399,7 +502,7 @@ def print_distances(network, start_name):
     """
 
     # Print Message
-    print(f'Below are the shortest distances and paths from {start_name} to each intersection')
+    print(f'Below are the shortest distances and paths from {start_name} to each intersection:\n')
 
     # Loop through the Road Network's intersections
     for intersection in network.intersections.values():
@@ -473,8 +576,8 @@ def run_algorithm(network, start_name):
     queue_total_time = (end_time - start_time) * 1000
 
     # Print the Algorithm's stats
-    print(f'Dijkstra with Queue time: {queue_total_time}')
-    print(f'Dijkstra with Queue memory: {queue_memory_peak}')
+    print(f'Dijkstra with Queue time: {queue_total_time:.4f} ms')
+    print(f'Dijkstra with Queue memory: {queue_memory_peak} bytes')
 
     # Print the Algorithm's distances
     print_distances(network, start_name)
@@ -542,24 +645,4 @@ def problem_1():
 if __name__ == "__main__":
     problem_1()
 
-    
 
-
-###############################################################################################
-# Class: HeapNode
-# Description:
-# Inherits from the Node class
-# This is the class used for each Fibonacci Heap node.
-#
-#
-###############################################################################################
-    
-#class HeapNode(Node):
-#    def __init__(self, node):
-#        self.node = node
-#        self.parent = None
-#        self.degree = 0
-#        self.child = None
-#        self.mark = False
-#        self.left = self
-#        self.right = self
