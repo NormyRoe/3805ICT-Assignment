@@ -3,18 +3,36 @@
 #
 ###############################################################################################
 import math
-import networkx as nx
-import matplotlib.pyplot as plt
+import time
+import tracemalloc
 
 
 ###############################################################################################
 # Class: Intersection
 # Description:
 # Represents a single intersection node in the road network.
-# Stores which other intersections can be reached from this intersection.
+# Stores the intersection name, outgoing roads, and metadata used by Dijkstra's Algorithm.
 ###############################################################################################
 class Intersection:
     def __init__(self, name):
+        """
+        Create a new Intersection object.
+
+        Parameters:
+            name (str):
+                The name of the intersection.
+
+        Attributes:
+            name (str):
+                The intersection's name.
+            distance (float):
+                The shortest known distance from the start node (used by Dijkstra).
+            parent (Intersection or None):
+                The previous intersection on the shortest path.
+            neighbors (dict):
+                A dictionary mapping neighbor intersection names to road distances.
+        """
+
         self.name = name
 
         # Variables needed for Dijkstra:
@@ -29,7 +47,8 @@ class Intersection:
 ###############################################################################################
 # Class: RoadNetwork
 # Description:
-# Represents the entire road network (graph).
+# Represents the entire directed road network as a graph.
+# Stores intersections and provides methods to add nodes and roads.
 ###############################################################################################
 class RoadNetwork:
     def __init__(self):
@@ -46,6 +65,16 @@ class RoadNetwork:
     # Output:   N/A
     ###############################################################################################
     def add_intersection(self, name):
+        """
+        Add a new intersection to the road network.
+
+        Parameters:
+            name (str):
+                The name of the intersection to add.
+
+        Side Effects:
+            Creates and stores a new Intersection object unless the name already exists.
+        """
 
         # Check that the intersection doesn't exist
         if name not in self.intersections:
@@ -71,6 +100,20 @@ class RoadNetwork:
     # Output:   N/A
     ###############################################################################################
     def add_road(self, source, target, distance):
+        """
+        Add a directed road between two intersections.
+
+        Parameters:
+            source (str):
+                The name of the intersection the road starts from.
+            target (str):
+                The name of the intersection the road leads to.
+            distance (int or float):
+                The length of the road.
+
+        Side Effects:
+            Updates the adjacency list of the source intersection.
+        """
 
         # Check that both intersections exist
         if source in self.intersections and target in self.intersections:
@@ -88,40 +131,32 @@ class RoadNetwork:
     ###############################################################################################
     # Function: draw_network
     # Description:
-    # Draws the road network as a visual graph with nodes and weighted edges.
+    # Prints all intersections and their outgoing roads.
     ###############################################################################################
     def draw_network(self):
+        """
+        Print all intersections and their outgoing roads.
+
+        This function outputs a readable adjacency list showing:
+        - Each intersection
+        - Each directed road originating from it
+        - The distance associated with each road
+        """
         
-        G = nx.DiGraph()
+        print("\nRoad Network:")
+        print("-------------")
 
-        # Add nodes
-        for name in self.intersections:
-            G.add_node(name)
+        for name, intersection in self.intersections.items():
 
-        # Add edges with weights
-        for source, intersection in self.intersections.items():
-            for target, distance in intersection.neighbors.items():
-                G.add_edge(source, target, weight=distance)
+            print(f"{name}:")
 
-        # Kamada-Kawai layout (best for road networks)
-        pos = nx.kamada_kawai_layout(G)
+            if len(intersection.neighbors) == 0:
+                print("  (no outgoing roads)")
+            else:
+                for target, distance in intersection.neighbors.items():
+                    print(f"  -> {target} (distance {distance})")
 
-        # Draw nodes
-        nx.draw_networkx_nodes(G, pos, node_size=1500, node_color="lightblue")
-
-        # Draw labels
-        nx.draw_networkx_labels(G, pos, font_size=10)
-
-        # Draw edges
-        nx.draw_networkx_edges(G, pos, arrowstyle="->", arrowsize=20)
-
-        # Draw edge labels (weights)
-        edge_labels = nx.get_edge_attributes(G, 'weight')
-        nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
-
-        plt.title("Road Network Graph")
-        plt.axis("off")
-        plt.show()
+        print("-------------\n")
 
 
 
@@ -129,7 +164,8 @@ class RoadNetwork:
 ###############################################################################################
 # Class: PriorityQueue
 # Description:
-# Creates a Priority Queue list object for the Dijkstra algorithm to use.
+# A simple priority queue used by Dijkstra's Algorithm.
+# Stores intersections sorted by their current shortest known distance.
 #
 ###############################################################################################
 
@@ -147,6 +183,13 @@ class PriorityQueue():
     # Output:   N/A
     ###############################################################################################
     def add_node(self, node):
+        """
+        Add an intersection node to the priority queue.
+
+        The queue is sorted by each node's `distance` attribute so that
+        the node with the smallest distance is always processed first.
+        """
+
         self.queue_p.append(node)
 
         # Sort the queue by distance
@@ -162,6 +205,12 @@ class PriorityQueue():
     # Output:   Bool    Whether the queue is empty
     ###############################################################################################
     def empty(self):
+        """
+        Check whether the priority queue is empty.
+
+        Returns:
+            bool: True if the queue contains no nodes, otherwise False.
+        """
 
         return len(self.queue_p) == 0
 
@@ -176,29 +225,286 @@ class PriorityQueue():
     # Output:   Node        The node that is first in the queue
     ###############################################################################################
     def remove_node(self):
+        """
+        Remove and return the intersection with the smallest known distance.
+
+        Returns:
+            Intersection:
+                The next intersection to process in Dijkstra's Algorithm.
+        """
 
         # Return the first node
         return self.queue_p.pop(0)
 
 
+###############################################################################################
+# Function: dijkstra
+# Description:
+# Runs Dijkstra's Algorithm using the Priority Queue
+#
+# Input:    RoadNetwork     The road network being searched
+#           String          The name of the starting intersection
+# Output:   N/A
+###############################################################################################
+def dijkstra(network, start_name):
+    """
+    Compute the shortest paths from a starting intersection using Dijkstra's Algorithm.
+
+    This function updates each Intersection object in the provided RoadNetwork by:
+    - Setting its `distance` attribute to the shortest known distance from the start node.
+    - Setting its `parent` attribute to the previous node on the shortest path.
+
+    Parameters:
+        network (RoadNetwork):
+            The road network containing all intersections and directed roads.
+        start_name (str):
+            The name of the intersection from which shortest paths will be calculated.
+
+    Algorithm Overview:
+        1. All intersections are reset (distance = infinity, parent = None).
+        2. The starting intersection is assigned distance = 0 and added to a priority queue.
+        3. The queue repeatedly selects the intersection with the smallest known distance.
+        4. Each outgoing road is "relaxed":
+            - If a shorter path to a neighbour is found, update its distance and parent.
+            - The neighbour is re-added to the priority queue for further processing.
+        5. When the queue is empty, all reachable intersections contain their final shortest
+           distances and parent pointers.
+
+    Side Effects:
+        Modifies the `distance` and `parent` attributes of Intersection objects inside `network`.
+
+    Returns:
+        None
+        (Results are stored directly in the network's Intersection objects.)
+
+
+    """
+    # Create a Dijkstra's queue
+    dijkstra_queue = PriorityQueue()
+
+    # Ensure that all intersections start off with fresh settings    
+    for intersection in network.intersections.values():
+
+        # Set distance to infinity
+        intersection.distance = math.inf
+
+        # Set parent to None
+        intersection.parent = None
+
+    # Retrieve the starting intersection
+    start_node = network.intersections[start_name]
+
+    # Initialise the distance for the starting intersection to zero
+    start_node.distance = 0
+
+    # Add the starting intersection to the queue
+    dijkstra_queue.add_node(start_node)
+
+    # While the queue isn't empty
+    while not dijkstra_queue.empty():
+
+        # Pop the first intersection node from the queue
+        current_node = dijkstra_queue.remove_node()
+        
+        # For each neighbour of the intersection node
+        for neighbor_name, weight in current_node.neighbors.items():
+
+            # Retrieve the neighbor intersection object
+            neighbor = network.intersections[neighbor_name]
+
+            # Calculate the new distance for the neighbor intersection
+            new_distance = current_node.distance + weight
+
+            # Check if the new distance is less the the neighbor's existing distance
+            if new_distance < neighbor.distance:
+
+                # Update the neighbor's distance
+                neighbor.distance = new_distance
+
+                # Update the neighbor's parent
+                neighbor.parent = current_node
+
+                # Add the neighbor to the queue for processing
+                dijkstra_queue.add_node(neighbor)
+
+###############################################################################################
+# Function: reconstruct_path
+# Description:
+# Reconstruct the shortest path to the given intersection using parent pointers
+#
+# Input:    Intersection     The destination intersection
+# Output:   List             The path from the start to the destination
+###############################################################################################
+def reconstruct_path(intersection):
+    """
+    Reconstruct the shortest path to the given intersection.
+
+    This function follows the `parent` pointers assigned by Dijkstra's Algorithm
+    to build the path from the start node to the destination.
+
+    Parameters:
+        intersection (Intersection):
+            The destination intersection.
+
+    Returns:
+        list[str]:
+            A list of intersection names representing the shortest path.
+    """
+
+    # Create an empty path list
+    path = []
+
+    # Initialise a current intersection variable to the provided intersection
+    current = intersection
+
+    # Walk backwards through parent pointers
+    # While current is not set to None
+    while current is not None:
+
+        # Add the intersection to the path list
+        path.append(current.name)
+
+        # Set current as being the current intersection's parent
+        current = current.parent
+
+    # Reverse to get start → destination order
+    path.reverse()
+
+    # Return the path list
+    return path
+
+
+###############################################################################################
+# Function: print_distances
+# Description:
+# Output the Road Network's distances and reconstructed paths
+# after Dijkstra's Algorithm was run on it
+#
+# Input:    RoadNetwork     The road network that was searched
+#           String          The name of the starting intersection
+# Output:   N/A
+###############################################################################################
+def print_distances(network, start_name):
+    """
+    Print the shortest distances and reconstructed paths from the starting intersection.
+
+    Parameters:
+        network (RoadNetwork):
+            The road network containing all intersections.
+        start_name (str):
+            The name of the intersection from which Dijkstra's Algorithm was run.
+
+    Output:
+        Prints each intersection's shortest distance and the full path taken to reach it.
+    """
+
+    # Print Message
+    print(f'Below are the shortest distances and paths from {start_name} to each intersection')
+
+    # Loop through the Road Network's intersections
+    for intersection in network.intersections.values():
+
+        # Print the name and distance values for the intersection
+        print(f'{intersection.name}: {intersection.distance}')
+
+        # Reconstruct the path
+        path = reconstruct_path(intersection)
+
+        # Print the path
+        print(f'Path {" -> ".join(path)}\n')
+
+
+###############################################################################################
+# Function: run_algorithm
+# Description:
+# Runs Dijkstra's Algorithm on the provided Road Network using a Priority Queue.
+# Measures execution time and peak memory usage, then prints the algorithm results.
+#
+# Input:    RoadNetwork     The road network that is to be searched
+#           String          The name of the starting intersection
+# Output:   N/A
+###############################################################################################
+def run_algorithm(network, start_name):
+    """
+    Execute Dijkstra's Algorithm using a Priority Queue and report performance metrics.
+
+    This function performs the following steps:
+    - Starts a high-precision timer.
+    - Begins memory allocation tracing.
+    - Runs Dijkstra's Algorithm from the specified starting intersection.
+    - Captures the total execution time in milliseconds.
+    - Captures the peak memory usage during the algorithm.
+    - Prints the timing and memory results.
+    - Prints the shortest distances and reconstructed paths for all intersections.
+
+    Parameters:
+        network (RoadNetwork):
+            The road network containing all intersections and directed roads.
+        start_name (str):
+            The name of the intersection from which Dijkstra's Algorithm will begin.
+
+    Output:
+        Prints:
+            - Total execution time (ms)
+            - Peak memory usage (bytes)
+            - Shortest distances to each intersection
+            - Reconstructed shortest paths
+    """
+
+    # Start a timer
+    start_time = time.perf_counter()
+    
+    # Start memory allocation tracing
+    tracemalloc.start()
+
+    # Run Dijstra's Algorithm using a Priority Queue
+    dijkstra(network, start_name)
+
+    # End the timer
+    end_time = time.perf_counter()
+    
+    # Get the current and peak memory allocation
+    queue_memory_current, queue_memory_peak = tracemalloc.get_traced_memory()
+    
+    # Stop memory allocation tracing
+    tracemalloc.stop()
+
+    # Calculate the length of time it took in milliseconds
+    queue_total_time = (end_time - start_time) * 1000
+
+    # Print the Algorithm's stats
+    print(f'Dijkstra with Queue time: {queue_total_time}')
+    print(f'Dijkstra with Queue memory: {queue_memory_peak}')
+
+    # Print the Algorithm's distances
+    print_distances(network, start_name)
 
 
 ###############################################################################################
 # Function: problem_1
 # Description:
 # Entry Point for running Problem 1
-# Creates the road network and calls the appropriate algorithm functions.
+# Builds the road network, displays its structure, and runs Dijkstra's Algorithm.
 #
 # Input:    N/A
 # Output:   N/A
 ###############################################################################################
 def problem_1():
     """
-    problem_1.py
-    Entry point for the assignment - Problem 1.
+    Entry point for Problem 1.
 
+    This function:
+    - Creates the road network
+    - Adds all intersections
+    - Adds all directed roads
+    - Prints the network structure
+    - Runs Dijkstra's Algorithm using a Priority Queue
+    - Prints shortest distances and reconstructed paths
+    - Prints timing and memory usage statistics
 
+    It serves as the main driver for testing the Problem 1 implementation.
     """
+
     print("Program started...")
 
     # Create Road Network
@@ -223,10 +529,15 @@ def problem_1():
     network.add_road("Supernatural Circuit", "Charmed Drive", 10)
     network.add_road("Xena Road", "Buffy Avenue", 5)
     network.add_road("Xena Road", "Hercules Avenue", 10)
-    network.add_road("Hercules Avenue", "Angel Road", 5)
+    network.add_road("Hercules Avenue", "Charmed Drive", 5)
     network.add_road("Hercules Avenue", "Supernatural Circuit", 15)
 
+    # Draw Network
     network.draw_network()
+
+    # Run Dijkstra's Algorithm
+    run_algorithm(network, "Buffy Avenue")
+
 
 if __name__ == "__main__":
     problem_1()
