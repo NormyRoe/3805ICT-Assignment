@@ -1130,6 +1130,7 @@ def reconstruct_path(intersection):
 # Description:
 # Output the Road Network's distances and reconstructed paths
 # after Dijkstra's Algorithm was run on it
+# Output is restricted to only 15 Intersections
 #
 # Input:    RoadNetwork     The road network that was searched
 #           String          The name of the starting intersection
@@ -1138,6 +1139,9 @@ def reconstruct_path(intersection):
 def print_distances(network, start_name):
     """
     Print the shortest distances and reconstructed paths from the starting intersection.
+
+    The output is limited to just 15 intersections, as printing for every intersection 
+    in a large road network is not practical.
 
     Parameters:
         network (RoadNetwork):
@@ -1152,8 +1156,17 @@ def print_distances(network, start_name):
     # Print Message
     print(f'Below are the shortest distances and paths from {start_name} to each intersection:\n')
 
+    # Initialise a count to limit output
+    count = 0
+
     # Loop through the Road Network's intersections
     for intersection in network.intersections.values():
+
+        # If count is greater than or equal to 15
+        if count >= 15:
+
+            # Break out of loop
+            break
 
         # Print the name and distance values for the intersection
         print(f'{intersection.name}: {intersection.distance}')
@@ -1163,6 +1176,9 @@ def print_distances(network, start_name):
 
         # Print the path
         print(f'Path {" -> ".join(path)}\n')
+
+        # Increase count
+        count += 1
 
 
 ###############################################################################################
