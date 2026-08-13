@@ -197,6 +197,35 @@ def test_case_6_large():
     network.add_road("Swamp Lane", "Charmed Drive", 4)
     network.add_road("Swamp Lane", "Hercules Avenue", 4)
 
+    # Add an additional 500 intersections and directional roads in a chain
+    for i in range(1, 501):
+
+        # Name the intersection
+        name = f'Intersection {i}'
+
+        # Create the new intersection
+        network.add_intersection(name)
+
+        # If the number is 1
+        if i == 1:
+
+            # Create the directional road from Flash Street
+            network.add_road("Flash Street", name, 5)
+
+        # Else
+        else:
+
+            # Create the directional road from the previous one
+            network.add_road(f'Intersection {i-1}', name, 5)
+
+        # For every third intersection
+        if i % 3 == 0:
+
+            # Add two more directional roads
+            network.add_road(name, f'Intersection {i-1}', 5)
+            network.add_road(name, f'Intersection {i-2}', 5)
+            network.add_road(f'Intersection {i-2}', name, 8)
+
     # Print what is being tested
     print("Test Case 6: Large Road Network\n")
 
@@ -205,3 +234,12 @@ def test_case_6_large():
 
     # Print an empty line
     print("\n")
+
+
+if __name__ == "__main__":
+    test_case_1_nonexistent()
+    test_case_2_first()
+    test_case_3_other()
+    test_case_4_unreachable()
+    test_case_5_one_way()
+    test_case_6_large()
