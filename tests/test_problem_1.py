@@ -6,14 +6,14 @@ Pytest file for testing the Assignment's Problem 1.
 from src.problem_1 import RoadNetwork, run_algorithm
 
 ###############################################################################################
-# Function: build_network_case_1
+# Function: build_network
 # Description:
-# Builds the road network for Case 1
+# Builds the road network for the test cases to use
 #
 # Input:    N/A
 # Output:   Network     The built Road Network
 ###############################################################################################
-def build_network_case_1():
+def build_network():
 
     # Create Road Network
     network = RoadNetwork()
@@ -54,7 +54,7 @@ def build_network_case_1():
 def test_case_1_nonexistent():
 
     # Build the Road Network
-    network = build_network_case_1()
+    network = build_network()
 
     # Print what is being tested
     print("Test Case 1: Non-Existent Intersection\n")
@@ -76,7 +76,7 @@ def test_case_1_nonexistent():
 def test_case_2_first():
 
     # Build the Road Network
-    network = build_network_case_1()
+    network = build_network()
 
     # Print what is being tested
     print("Test Case 2: First Intersection Created\n")
@@ -99,7 +99,7 @@ def test_case_2_first():
 def test_case_3_other():
 
     # Build the Road Network
-    network = build_network_case_1()
+    network = build_network()
 
     # Print what is being tested
     print("Test Case 3: Other Intersection Created\n")
@@ -122,7 +122,7 @@ def test_case_3_other():
 def test_case_4_unreachable():
 
     # Build the Road Network
-    network = build_network_case_1()
+    network = build_network()
 
     # Add a new intersection
     network.add_intersection("Arrow Lane")
@@ -148,7 +148,7 @@ def test_case_4_unreachable():
 def test_case_5_one_way():
 
     # Build the Road Network
-    network = build_network_case_1()
+    network = build_network()
 
     # Add a new intersection
     network.add_intersection("Flash Street")
@@ -177,7 +177,7 @@ def test_case_5_one_way():
 def test_case_6_large():
 
     # Build the Road Network
-    network = build_network_case_1()
+    network = build_network()
 
     # Add new intersections
     network.add_intersection("Flash Street")
@@ -197,8 +197,8 @@ def test_case_6_large():
     network.add_road("Swamp Lane", "Charmed Drive", 4)
     network.add_road("Swamp Lane", "Hercules Avenue", 4)
 
-    # Add an additional 500 intersections and directional roads in a chain
-    for i in range(1, 501):
+    # Add an additional 2500 intersections and directional roads in a chain
+    for i in range(1, 2501):
 
         # Name the intersection
         name = f'Intersection {i}'
