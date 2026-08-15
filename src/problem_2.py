@@ -72,44 +72,41 @@ class BTreeNode:
     ###############################################################################################
     def insert(self, node, key):
         """
-    Insert a key into the B-Tree starting at the given node.
+`        Insert a key into the B-Tree starting at the given node.
 
-    This method implements the standard B-Tree insertion algorithm for a
-    minimum degree t, using a node-driven design. Keys are always inserted
-    into a leaf node, and internal nodes are split as needed while descending
-    the tree.
+        This method implements node-driven B-Tree insertion for minimum degree t.
+        Keys are always inserted into a leaf node, and full nodes are split as
+        needed while descending the tree.
 
-    Behaviour:
-        • If the current node has children:
-            - Determine which child subtree the key belongs to.
-            - If that child is full (contains 2t-1 keys), split the child
-              BEFORE descending. Splitting promotes the child's median key
-              into the current node and replaces the child with two new
-              children. After the split, the correct child index is recomputed.
-            - Recursively continue insertion into the appropriate child.
+        Behaviour:
+            • If the current node has children:
+                - Determine which child subtree the key belongs to.
+                - Recursively continue insertion into that child.
 
-        • If the current node is a leaf:
-            - Insert the key into the node's key list and keep the keys sorted.
+            • If the current node is full and is the root:
+                - The root is split using split_root(), promoting the median key
+                and creating two children.
+                - Insertion restarts at the updated root.
 
-        • If the current node is full and is the root:
-            - The root is split using split_root(), which promotes the median
-              key and creates two children. Insertion then restarts at the
-              updated root.
+            • If the current node is full and is NOT the root:
+                - The node is split using split_node(), promoting the median key
+                to its parent and replacing the node with two new children.
+                - Insertion restarts at the parent node, because the correct
+                subtree may have changed after the split.
 
-        • If the current node is full and is NOT the root:
-            - The node is split using split_node(), which promotes the median
-              key to its parent and replaces the node with two new children.
+            • If the current node is a leaf:
+                - Insert the key into the node's key list and keep the keys sorted.
 
-    Notes:
-        • Full children must always be split BEFORE descending into them.
-          This guarantees that insertion never enters a full node, ensuring
-          that leaf insertion is always possible.
+        Notes:
+            • Internal node splits redistribute both keys and children so that
+            each resulting node satisfies B-Tree degree constraints.
 
-        • Internal node splits redistribute both keys and children so that
-          each resulting node satisfies B-Tree degree constraints.
+            • After splitting a non-root node, insertion must restart at the
+            parent, because the promoted median changes the parent's key ranges
+            and therefore the correct subtree for the key.
 
-        • Root growth (creating a new root above the old one) is handled by
-          the BTree class, not by this method.
+            • Root growth (creating a new root above the old one) is handled by
+            the BTree class, not by this method.`
         
         """
         # Check if there are children
@@ -127,24 +124,6 @@ class BTreeNode:
 
             # Grab the child node
             child = node.children[i]
-
-            # Check if the child's keys is full
-            if len(child.keys) == child.keys_max:
-
-                # Child is full, so split the child
-                self.split_node(child)
-
-                # Reset the index variable
-                i = 0
-                
-                # While loop to re-get the key index value (as it may have changed)
-                while i < len(node.keys) and key > node.keys[i]:
-                
-                    # Increment the index
-                    i += 1
-                
-                # Grab the child node
-                child = node.children[i]
 
             # Insert the key in to the child for that index
             self.insert(child, key)
@@ -170,8 +149,14 @@ class BTreeNode:
             # Else it is not the root node
             else:
 
+                # Grab the parent node
+                parent = node.parent
+
                 # Split the node
                 self.split_node(node)
+
+                # Insert the key using the parent node
+                self.insert(parent, key)
 
         # Else Check if the node is a leaf
         elif node.leaf:
@@ -278,8 +263,8 @@ class BTreeNode:
                 - The median key is promoted to the parent.
                 - The parent replaces the original node with the two new nodes.
 
-        The original node is logically removed from the tree structure once the
-        parent replaces it. No further operations are performed on the old node.
+        After this operation, the original node is no longer part of the B-Tree 
+        structure; it is replaced entirely by the two new nodes.
         
         """
         # Grab the degree value
@@ -337,13 +322,6 @@ class BTreeNode:
         # Replace node with child_left and child_right
         parent.children[parent_index] = child_left
         parent.children.insert(parent_index + 1, child_right)
-
-
-
-
-
-
-        
         
 
     ###############################################################################################
@@ -358,33 +336,63 @@ class BTreeNode:
     ###############################################################################################
     def search(self, node, key):
         """
-        Search a B-Tree node.
-        
+        Recursively search a B-Tree node for a specific key.
+
+        Behaviour:
+            • If the key exists in the current node's key list:
+                - Return the current node.
+
+            • If the current node is a leaf:
+                - The key cannot be found anywhere below this point.
+                - Return None.
+
+            • Otherwise (internal node):
+                - Determine which child subtree the key belongs to by scanning
+                the node's keys.
+                - Recursively search the selected child.
+                - Return the result of the recursive search.
+
         Parameters:
             node (BTreeNode):
-                The node to be searched.
+                The node to search within.
             key (int):
-                The value to search for        
+                The value to search for.
+
+        Returns:
+            BTreeNode or None:
+                The node containing the key if found, otherwise None.
         
         """
 
         # For loop through the keys
-        for index, k in enumerate(self.keys):
+        if key in node.keys:
 
-            # If the stored key is greater than or equal to the search value
-            if self.keys[index] >= key:
+            # Return the node
+            return node
 
-                # Determine if the key has been found
-                if self.keys[index] == key:
+        # Else if there are no children
+        elif len(node.children) == 0:
 
-                    # Return this node
-                    return node
+            # Key not found
+            return None
+        
+        # Else identify which child to search
+        else:
 
-                # Else if node is a leaf
-                elif self.leaf == True:
+            # Create an index variable
+            i = 0
 
-                    # Return none as key cannot be found
-                    return None
+            # While loop to get the correct key index value
+            while i < len(node.keys) and key > node.keys[i]:
+
+                # Increment the index
+                i += 1
+
+            # Grab the child node
+            child = node.children[i]
+
+            # Search the child node
+            return self.search(child, key)
         
 
 
@@ -531,6 +539,39 @@ class BTree:
 
 
     ###############################################################################################
+    # Function: print_node
+    # Description:
+    # Prints the B-Tree node that contains the key searched for
+    #
+    # Input:    BTreeNode     The node that contains the key
+    #           Key           The key that was searched for
+    # Output:   N/A
+    ###############################################################################################
+    def print_node(self, node, key):
+        """
+        Print a message indicating that the search was successful and display
+        the B-Tree node containing the requested key.
+
+        Parameters:
+            node (BTreeNode):
+                The node in which the key was found.
+            key (int):
+                The key that was searched for.
+
+        Returns:
+            None
+                This method prints output directly.
+        
+        """
+        # Print success message
+        print(f'Search Successful: {key} found in the below node')
+
+        # Print the node
+        print(f"Node(keys={node.keys})")
+
+        
+
+    ###############################################################################################
     # Function: search
     # Description:
     # Searches the B-Tree for the specified key.
@@ -541,13 +582,46 @@ class BTree:
     ###############################################################################################
     def search(self, key):
         """
-        Search a B-Tree.
-        
+        Search the B-Tree for a specific key, starting at the root node.
+
+        This method performs a user-facing search operation. It delegates the
+        actual recursive search logic to BTreeNode.search(), which returns either
+        the node containing the key or None.
+
+        Behaviour:
+            • If the key is found:
+                - print_node() is called to display a success message and the
+                node containing the key.
+
+            • If the key is not found:
+                - A message is printed indicating that the key does not exist
+                in the B-Tree.
+
         Parameters:
             key (int):
-                The value to search for        
+                The value to search for.
+
+        Returns:
+            None
+                This method does not return the node; it prints the result
+                directly for user feedback.
         
         """
+
+        # Search for the provided key
+        result = self.root.search(self.root, key)
+
+        # If result is not None
+        if result is not None:
+
+            # Print the BTreeNode
+            self.print_node(result, key)
+
+        # Else no result
+        else:
+
+            # Print a message
+            print(f'Search unsuccessful: {key} does not exist')
 
     
 
@@ -674,6 +748,20 @@ def problem_2():
     b_tree.print_tree(b_tree.root)
             
     print("\n")
+
+    b_tree.search(75)
+
+    print("\n")
+    
+    b_tree.search(16)
+
+    print("\n")
+    
+    b_tree.search(36)
+
+    print("\n")
+    
+    b_tree.search(46)
 
 
 
