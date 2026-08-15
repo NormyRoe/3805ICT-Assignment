@@ -395,11 +395,62 @@ class BTreeNode:
             return self.search(child, key)
         
 
+    ###############################################################################################
+    # Function: traverse
+    # Description:
+    # Performs an in-order traversal of a B-Tree node.
+    # Appends all keys to the provided result list in sorted order.
+    #
+    # Input:    node    The BTreeNode to traverse
+    #           result  A list used to collect keys during traversal
+    # Output:   N/A
+    ###############################################################################################  
+    def traverse(self, node, result):
+        """
+        Perform an in-order traversal of a B-Tree node.
 
-    
+        In-order traversal visits keys in strictly sorted order by:
+            • Recursively traversing each child subtree before its corresponding key.
+            • Appending each key to the result list.
+            • Traversing the final child after all keys have been processed.
 
-    def traverse(self):
-        pass
+        This logic applies to both leaf and internal nodes. Leaf nodes simply
+        append their keys, while internal nodes recursively traverse their children
+        in the correct in-order sequence.
+
+        Parameters:
+            node (BTreeNode):
+                The node to traverse.
+            result (list):
+                A list that accumulates all keys encountered during traversal.
+
+        Returns:
+            None
+                Keys are appended to the result list; no value is returned.
+        """
+
+        # For each key in the node
+        for i in range(len(node.keys)):
+
+            # If the node has children
+            if len(node.children) > 0:
+
+                # Traverse through the child for that key
+                self.traverse(node.children[i], result)
+
+            # Add the key to the result list
+            result.append(node.keys[i])
+
+
+        # If the node has children
+        if len(node.children) > 0:
+
+            # Traverse the last child
+            self.traverse(node.children[len(node.keys)], result)
+
+
+
+
 
     def remove(self, key):
         pass
@@ -568,7 +619,6 @@ class BTree:
 
         # Print the node
         print(f"Node(keys={node.keys})")
-
         
 
     ###############################################################################################
@@ -623,32 +673,55 @@ class BTree:
             # Print a message
             print(f'Search unsuccessful: {key} does not exist')
 
-    
+
+    ###############################################################################################
+    # Function: traverse
+    # Description:
+    # Performs an in-order traversal of the entire B-Tree.
+    # Prints all keys in sorted order.
+    #
+    # Input:    N/A
+    # Output:   N/A
+    ###############################################################################################
+    def traverse(self):
+        """
+        Perform an in-order traversal of the entire B-Tree.
+
+        This method begins traversal at the root node and collects all keys
+        in sorted order using BTreeNode.traverse(). Once traversal is complete,
+        the keys are printed as a comma-separated list.
+
+        In-order traversal is useful for:
+            • Verifying structural correctness of the B-Tree.
+            • Debugging insertion and deletion operations.
+            • Producing a sorted list of all keys stored in the tree.
+
+        Returns:
+            None
+                This method prints output directly.
+        """
+
+        # Print an empty line
+        print("In-Order Traversal of the B-Tree:\n")
+
+        # Create an empty result list
+        result = []
+        
+        # Traverse from the root BTreeNode
+        self.root.traverse(self.root, result)
+
+        # Print the results with a comma and space separating each key
+        print(", ".join(str(k) for k in result))
+
+        # Print an empty line
+        print()
+
+
 
     def delete(self, key):
         pass
 
-    def traverse(self):
-        pass
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    
 
 
 
@@ -762,6 +835,10 @@ def problem_2():
     print("\n")
     
     b_tree.search(46)
+
+    print("\n")
+
+    b_tree.traverse()
 
 
 
