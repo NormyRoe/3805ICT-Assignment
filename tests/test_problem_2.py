@@ -262,6 +262,12 @@ def test_case_5_search_nonexistent():
     # Print an empty line
     print("\n")
 
+    # Print the B-Tree
+    b_tree.print_tree(b_tree.root)
+
+    # Print an empty line
+    print("\n")
+
     # Search for key
     b_tree.search(75)
 
@@ -299,6 +305,12 @@ def test_case_6_search_exists():
 
 		# Insert the key
         b_tree.insert(k)
+
+    # Print an empty line
+    print("\n")
+
+    # Print the B-Tree
+    b_tree.print_tree(b_tree.root)
 
     # Print an empty line
     print("\n")
@@ -352,6 +364,12 @@ def test_case_7_traversal():
 
     # Search for key
     b_tree.traverse()
+
+    # Print an empty line
+    print("\n")
+
+    # Print the B-Tree
+    b_tree.print_tree(b_tree.root)
 
     # Print an empty line
     print("\n")
@@ -516,7 +534,7 @@ def test_case_10_delete_shrink():
     print("Delete: 42, 36")
 
     # For loop for deletion
-    for k in [16, 36]:
+    for k in [42, 36]:
 
         # Delete key
         b_tree.delete(k)
