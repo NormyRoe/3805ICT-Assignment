@@ -1359,6 +1359,7 @@ def problem_2():
     b_tree.insert(54)    
     b_tree.insert(56)
     b_tree.insert(58)
+    """
     b_tree.insert(62)
     b_tree.insert(64)
     b_tree.insert(66)
@@ -1415,7 +1416,7 @@ def problem_2():
     b_tree.delete(18)
         
     b_tree.print_tree(b_tree.root)
-
+    """
 
 
 if __name__ == "__main__":
