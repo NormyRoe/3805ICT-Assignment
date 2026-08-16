@@ -1032,6 +1032,7 @@ class BTree:
     # Prints the B-Tree
     #
     # Input:    BTreeNode     The node that the tree starts at
+    #           int           The level to start the B-Tree at
     # Output:   N/A
     ###############################################################################################
     def print_tree(self, node, level=0):
@@ -1203,12 +1204,21 @@ class BTree:
         True or False.
 
         Behaviour:
-            • If the key is deleted:
-                - Display a success message
+            • Check if the key exists:
 
-            • If the key is not deleted:
-                - Displays a message indicating that the key does not exist
-                in the B-Tree.
+                - If the key doesn't exist:
+
+                    - Displays a message indicating that the key does not exist
+                    in the B-Tree.
+            
+                - If the key exists:
+                
+                    - If the key is deleted:
+                        - Display a success message
+
+                    - If the key is not deleted:
+                        - Displays a message indicating that the key does not exist
+                        in the B-Tree.
 
         Parameters:
             key (int):
@@ -1220,30 +1230,41 @@ class BTree:
                 directly for user feedback.
         
         """
+        # Check if the key exists
+        found = self.root.search(self.root, key)
 
-        # Delete the provided key
-        result = self.root.delete(key)
-
-        # If root becomes empty and has children
-        if len(self.root.keys) == 0 and len(self.root.children) > 0:
-
-            # Replace the root with its only child
-            self.root = self.root.children[0]
-
-            # Update the new root to have no parent
-            self.root.parent = None
-
-        # If result is true
-        if result:
-
-            # Print a confirmation message
-            print(f'Successfully Deleted key: {key}')
-
-        # Else result is false
-        else:
+        # If found is None
+        if found is None:
 
             # Print a message
             print(f'Deletion Unsuccessful: Unable to find key {key}')
+
+        # Else key exists
+        else:
+
+            # Delete the provided key
+            result = self.root.delete(key)
+
+            # If root becomes empty and has children
+            if len(self.root.keys) == 0 and len(self.root.children) > 0:
+
+                # Replace the root with its only child
+                self.root = self.root.children[0]
+
+                # Update the new root to have no parent
+                self.root.parent = None
+
+            # If result is true
+            if result:
+
+                # Print a confirmation message
+                print(f'Successfully Deleted key: {key}')
+
+            # Else result is false
+            else:
+
+                # Print a message
+                print(f'Deletion Unsuccessful: Unable to find key {key}')
 
 
 
@@ -1261,8 +1282,12 @@ def problem_2():
     main.py
     Entry point for the assignment.
 
-    This template includes standard imports (numpy, matplotlib)
-    so you can begin coding immediately.
+    The function:
+        - Creates a B-Tree
+        - Inserts keys in to the B-Tree
+        - Prints the B-Tree structure
+        - Searches the B-Tree
+        - Traverses the B-Tree
     """
     print("Program started.\n")
 
@@ -1360,6 +1385,36 @@ def problem_2():
     print("\n")
 
     b_tree.traverse()
+
+    print("\n")
+
+    b_tree.delete(4)
+
+    b_tree.print_tree(b_tree.root)
+
+    print("\n")
+    
+    b_tree.delete(68)
+    
+    b_tree.print_tree(b_tree.root)
+
+    print("\n")
+    
+    b_tree.delete(72)
+    
+    b_tree.print_tree(b_tree.root)
+
+    print("\n")
+        
+    b_tree.delete(12)
+        
+    b_tree.print_tree(b_tree.root)
+
+    print("\n")
+        
+    b_tree.delete(18)
+        
+    b_tree.print_tree(b_tree.root)
 
 
 
