@@ -72,7 +72,7 @@ class BTreeNode:
     ###############################################################################################
     def insert(self, node, key):
         """
-`        Insert a key into the B-Tree starting at the given node.
+        Insert a key into the B-Tree starting at the given node.
 
         This method implements node-driven B-Tree insertion for minimum degree t.
         Keys are always inserted into a leaf node, and full nodes are split as
@@ -81,7 +81,11 @@ class BTreeNode:
         Behaviour:
             • If the current node has children:
                 - Determine which child subtree the key belongs to.
-                - Recursively continue insertion into that child.
+                - If that child is full (contains 2t-1 keys), split the child
+                BEFORE descending. Splitting promotes the child's median key
+                into the current node and replaces the child with two new
+                children. After the split, the correct child index is recomputed.
+                - Recursively continue insertion into the appropriate child.
 
             • If the current node is full and is the root:
                 - The root is split using split_root(), promoting the median key
@@ -98,6 +102,10 @@ class BTreeNode:
                 - Insert the key into the node's key list and keep the keys sorted.
 
         Notes:
+            • Full children must always be split BEFORE descending into them.
+            This ensures insertion never enters a full node, guaranteeing that
+            leaf insertion is always possible.
+
             • Internal node splits redistribute both keys and children so that
             each resulting node satisfies B-Tree degree constraints.
 
@@ -106,24 +114,30 @@ class BTreeNode:
             and therefore the correct subtree for the key.
 
             • Root growth (creating a new root above the old one) is handled by
-            the BTree class, not by this method.`
+            the BTree class, not by this method.
         
         """
         # Check if there are children
         if len(node.children) > 0:
 
             # Then identify which child to insert into
-            # Create an index variable
-            i = 0
-
-            # While loop to get the correct key index value
-            while i < len(node.keys) and key > node.keys[i]:
-
-                # Increment the index
-                i += 1
+            # Get the index variable
+            i = node.find_key_index(key)
 
             # Grab the child node
             child = node.children[i]
+
+            # Check if the child has the maximum keys
+            if len(child.keys) == child.keys_max:
+
+                # Split the child
+                self.split_node(child)
+
+                # Re-get the index variable
+                i = node.find_key_index(key)
+
+                # Select the correct child node
+                child = node.children[i]
 
             # Insert the key in to the child for that index
             self.insert(child, key)
@@ -180,7 +194,7 @@ class BTreeNode:
     # Splits the keys in the root node and creates children nodes to hold some of the keys
     # 
     #
-    # Input:    N/A
+    # Input:    node    The root node to be split
     # Output:   N/A
     ###############################################################################################
     def split_root(self, node):
@@ -241,7 +255,7 @@ class BTreeNode:
     # If the node being split is a parent node, redistribute the existing children 
     # amongst the two new children nodes.
     #
-    # Input:    N/A
+    # Input:    node    The non-root node to be split
     # Output:   N/A
     ###############################################################################################
     def split_node(self, node):
@@ -331,7 +345,7 @@ class BTreeNode:
     # 
     #
     # Input:    BTreeNode   The node to conduct the search in
-    #           key         The key to be search for
+    #           key         The key to be searched for
     # Output:   BTreeNode   The node that contains the key
     ###############################################################################################
     def search(self, node, key):
@@ -379,14 +393,8 @@ class BTreeNode:
         # Else identify which child to search
         else:
 
-            # Create an index variable
-            i = 0
-
-            # While loop to get the correct key index value
-            while i < len(node.keys) and key > node.keys[i]:
-
-                # Increment the index
-                i += 1
+            # Get the index variable
+            i = node.find_key_index(key)
 
             # Grab the child node
             child = node.children[i]
@@ -448,27 +456,487 @@ class BTreeNode:
             # Traverse the last child
             self.traverse(node.children[len(node.keys)], result)
 
+    ###############################################################################################
+    # Function: delete
+    # Description:
+    # Deletes the provided key
+    # 
+    #
+    # Input:    key         The key to be deleted
+    # Output:   Bool        The result of the deletion
+    ###############################################################################################
+    def delete(self, key):
+        """
+        Delete the specific key from the B-Tree starting at this node.
+
+        Behaviour:
+            • If the key is found in this node:
+                - If this node is a leaf, remove the key directly.
+                - If this node is internal, use successor/predecessor or merge
+                children to maintain B-Tree properties.
+            • If the key is not in this node but this node has children:
+                - Determine the child subtree where the key should be.
+                - If that child is at minimum capacity, fix it (borrow or merge)
+                before descending.
+                - Recursively delete the key from the chosen child.
+            • If the key is not in this node and this node is a leaf:
+                - The key does not exist; return False.
+
+        Returns:
+            bool:
+                True if the key was deleted, False if the key was not found.
+        
+        """
+
+        # Step 1: Find the index of the key or the child to descend into
+        index = self.find_key_index(key)
+
+        # Step 2: Case A: Key is in this node
+
+        # If the index is less then the count of keys
+        # And the key at that index matches the provided key
+        if index < len(self.keys) and self.keys[index] == key:
+
+            # Case A-1: Node is a Leaf
+
+            # Check if the node is a leaf
+            if self.leaf:
+
+                # Delete the key
+                del self.keys[index]
+
+                # return true
+                return True
+
+            # Case A-2: Node is not a Leaf
+
+            # Else the node is not a leaf
+            else:
+
+                # Indentify the children either side of the index
+                child_left = self.children[index]
+                child_right = self.children[index + 1]
+
+                # Case A-2-2: Use Successor
+
+                # Check if the right child has more than the minimum keys
+                if len(child_right.keys) > self.keys_min:
+
+                    # Find the successor (smallest key in right child)
+                    successor = child_right.get_successor()
+
+                    # Replace the key with the successor
+                    self.keys[index] = successor
+
+                    # Delete the successor from the right child
+                    return child_right.delete(successor)
+
+                # Case A-2-3: Use Predecessor
+
+                # Else if the left child has more than the minimum keys
+                elif len(child_left.keys) > self.keys_min:
+                
+                    # Find the predecessor (largest key in left child)
+                    predecessor = child_left.get_predecessor()
+                
+                    # Replace the key with the predecessor
+                    self.keys[index] = predecessor
+                
+                    # Delete the predecessor from the left child
+                    return child_left.delete(predecessor)
+
+                # Case A-2-4: Merge Children
+
+                # Else neither children have enough keys
+                else:
+
+                    # Merge the children
+                    self.merge_children(index)
+
+                    # After merging, the merged node is at children[index]
+                    merged_child = self.children[index]
+
+                    # Delete the key from the merged child
+                    return merged_child.delete(key)
+
+        # Step 2: Case B: Key is not in this node
+
+        # Else if the node has children
+        elif len(self.children) > 0:
+
+            # Determine the child to descend into
+            child = self.children[index]
+
+            # Check if the child has at least t keys
+            if len(child.keys) == self.keys_min:
+
+                # Fix the child
+                self.fix_child(index)
+
+                # Re-calculate index
+                index = self.find_key_index(key)
+
+                # Re-grab the child
+                child = self.children[index]
+
+            # Descend in to the child
+            return child.delete(key)
+
+        # Step 3: Case C: Key doesn't exist
+
+        # Else key doesn't exist
+        else:
+
+            # Return False
+            return False
 
 
+    ###############################################################################################
+    # Function: find_key_index
+    # Description:
+    # Finds the index of the key in the node, or the child index to descend into.
+    #
+    # Input:    key         The key being searched for
+    # Output:   int         The index position
+    ###############################################################################################
+    def find_key_index(self, key):
+        """
+        Find the index of the key in this node, or the index of the child
+        subtree where the key should be located.
+
+        Behaviour:
+            • Scans the node's keys from left to right.
+            • If a key >= the target key is found:
+                - Returns its index.
+            • If all keys are smaller:
+                - Returns len(self.keys), which corresponds to the last child.
+
+        Parameters:
+            key (int):
+                The key to locate.
+
+        Returns:
+            int:
+                The index of the key if present, or the child index to descend into.
+        """
+        # Create an index variable
+        i = 0
+        
+        # While loop to get the correct key index value
+        while i < len(self.keys) and key > self.keys[i]:
+        
+            # Increment the index
+            i += 1
+
+        # Return the index
+        return i
 
 
-    def remove(self, key):
-        pass
+    ###############################################################################################
+    # Function: get_successor
+    # Description:
+    # Finds the successor of a key by locating the smallest key in the right subtree.
+    #
+    # Input:    None (uses self as the subtree root)
+    # Output:   int  The successor key
+    ###############################################################################################
+    def get_successor(self):
+        """
+        Find the successor key in this subtree.
 
-    def remove_from_leaf(self, idx):
-        pass
+        Behaviour:
+            • Start at this node (the right child of the key being deleted).
+            • Descend left until reaching a leaf.
+            • The first key in that leaf is the successor.
 
-    def remove_from_non_leaf(self, idx):
-        pass
+        Returns:
+            int:
+                The smallest key in the subtree (the successor).
+        """
 
-    def borrow_from_prev(self, idx):
-        pass
+        # Start at this node
+        current = self
 
-    def merge(self, idx):
-        pass
+        # Descend left until reaching a leaf
+        while not current.leaf:
 
-    def fill(self, idx):
-        pass
+            # Move to the leftmost child
+            current = current.children[0]
+
+        # Now current is a leaf; the first key is the successor
+        return current.keys[0]
+
+
+    ###############################################################################################
+    # Function: get_predecessor
+    # Description:
+    # Finds the predecessor of a key by locating the largest key in the left subtree.
+    #
+    # Input:    None (uses self as the subtree root)
+    # Output:   int  The predecessor key
+    ###############################################################################################
+    def get_predecessor(self):
+        """
+        Find the predecessor key in this subtree.
+
+        Behaviour:
+            • Start at this node (the left child of the key being deleted).
+            • Descend right until reaching a leaf.
+            • The last key in that leaf is the predecessor.
+
+        Returns:
+            int:
+                The largest key in the subtree (the predecessor).
+        """
+
+        # Start at this node
+        current = self
+
+        # Descend right until reaching a leaf
+        while not current.leaf:
+
+            # Move to the rightmost child
+            current = current.children[-1]
+
+        # Now current is a leaf; the last key is the predecessor
+        return current.keys[-1]
+
+
+    ###############################################################################################
+    # Function: merge_children
+    # Description:
+    # Merges two children so that key deletion can occur
+    #
+    # Input:    index   The index around which the children need to be merged
+    # Output:   N/A
+    ###############################################################################################
+    def merge_children(self, index):
+        """
+        Merge the child at index with the child at index+1,
+        bringing the parent's key at 'index' down between them.
+
+        Behaviour:
+            • The parent's key at 'index' is moved down between the two children.
+            • The right child is merged into the left child (keys and children).
+            • The parent removes the key and the right child.
+
+        """
+
+        # Step 1: Identify the two children
+
+        # Grab the two children
+        child_left = self.children[index]
+        child_right = self.children[index + 1]
+
+        # Step 2: Bring the parent's key down into the left child
+
+        # Grab the key from the parent
+        key_from_parent = self.keys[index]
+
+        # Add this key to the end of the left child's keys
+        child_left.keys.append(key_from_parent)
+
+        # Step 3: Append all keys from the right child
+
+        # Add all of the right child's keys to the left child's keys
+        child_left.keys.extend(child_right.keys)
+
+        # Empty the right child of keys
+        child_right.keys = []
+
+        # Step 4: Append all children from the right child (if any)
+
+        # If the right child has children
+        if len(child_right.children) > 0:
+
+            # For each of the right child's children
+            for c in child_right.children:
+            
+                # Update their parent pointer
+                c.parent = child_left
+
+            # Add those children to the left child's children list
+            child_left.children.extend(child_right.children)
+
+            # Empty the right child of children
+            child_right.children = []
+
+        # Step 5: Remove the key from the parent
+        self.keys.pop(index)
+
+        # Step 6: Remove the right child from the parent's children list
+        self.children.pop(index + 1)
+
+        # Step 7: Update the merged child's parent pointer
+        child_left.parent = self
+
+
+    ###############################################################################################
+    # Function: fix_child
+    # Description:
+    # Ensures the child at the specified index has at least t keys before descending.
+    #
+    # Input:    int         The index of the child to fix
+    # Output:   None
+    ###############################################################################################
+    def fix_child(self, index):
+        """
+        Ensure that the child at the specified index has at least t keys before descending.
+
+        Behaviour:
+            • If the right sibling exists and has > keys_min keys:
+                - Borrow a key from the right sibling.
+                
+            • Else if the left sibling exists and has > keys_min keys:
+                - Borrow a key from the left sibling.
+
+            • Else:
+                - Merge the child with a sibling.
+                - After merging, the child to descend into changes.
+
+        Parameters:
+            index (int):
+                The index of the child to fix.
+
+        Returns:
+            None
+        """
+
+        # Case 1: Borrow from right sibling
+
+        # If index is less than the number of children, and the right child has more keys
+        if index < len(self.children) - 1 and len(self.children[index + 1].keys) > self.keys_min:
+
+            # Borrow from the right sibling
+            self.borrow_from_right(index)
+
+            # return
+            return
+        
+
+        # Case 2: Borrow from left sibling
+
+        # If index is greater than 0, and the left child has more keys
+        elif index > 0 and len(self.children[index - 1].keys) > self.keys_min:
+        
+            # Borrow from the left sibling
+            self.borrow_from_left(index)
+        
+            # return
+            return        
+
+        # Case 3: Merge with a sibling
+        else:
+
+            # Case 3-A: Merge with right sibling
+
+            # If index is less than the number of children
+            if index < len(self.children) - 1:
+
+                # Merge child with right sibling
+                self.merge_children(index)
+                return
+            
+            # Case 3-B: Merge with left sibling
+
+            # Else index is greater than 0
+            else:
+
+                # Merge child with left sibling
+                self.merge_children(index - 1)
+                return
+
+
+    ###############################################################################################
+    # Function: borrow_from_right
+    # Description:
+    # Borrows a key from the right sibling so that the child at index
+    # has enough keys to safely descend into.
+    #
+    # Input:    index   The index of the child needing keys
+    # Output:   N/A
+    ###############################################################################################
+    def borrow_from_right(self, index):
+        """
+        Borrow one key from the right sibling of the child at 'index'.
+
+        Behaviour:
+            • Move the parent's separator key down into the child.
+            • Move the right sibling's first key up into the parent.
+            • Move the right sibling's first child (if any) into the child.
+        """
+
+        # Grab the child
+        child = self.children[index]
+
+        # Grab the child's right sibling
+        right_sibling = self.children[index + 1]
+
+        # Step 1: Move the parent's separator key down into the child
+
+        # The separator key is at 'index' in the parent's key list
+        child.keys.append(self.keys[index])
+
+        # Step 2: Replace the parent's separator key with the right sibling's first key
+        self.keys[index] = right_sibling.keys.pop(0)
+
+        # Step 3: If the sibling has children, move its first child into 'child'
+        if len(right_sibling.children) > 0:
+
+            # Grab the first child pointer
+            moved_child = right_sibling.children.pop(0)
+
+            # Update its parent pointer
+            moved_child.parent = child
+
+            # Add it to the end of the child's children list
+            child.children.append(moved_child)
+    
+
+    ###############################################################################################
+    # Function: borrow_from_left
+    # Description:
+    # Borrows a key from the left sibling so that the child at index
+    # has enough keys to safely descend into.
+    #
+    # Input:    index   The index of the child needing keys
+    # Output:   N/A
+    ###############################################################################################
+    def borrow_from_left(self, index):
+        """
+        Borrow one key from the left sibling of the child at 'index'.
+
+        Behaviour:
+            • Move the parent's separator key down into the child.
+            • Move the left sibling's last key up into the parent.
+            • Move the left sibling's last child (if any) into the child.
+        """
+
+        # Grab the child
+        child = self.children[index]
+
+        # Grab the child's left sibling
+        left_sibling = self.children[index - 1]
+
+        # Step 1: Move the parent's separator key down into the child
+
+        # The separator key is at 'index - 1' in the parent's key list
+        child.keys.insert(0, self.keys[index - 1])
+
+        # Step 2: Replace the parent's separator key with the sibling's last key
+        self.keys[index - 1] = left_sibling.keys.pop()
+
+        # Step 3: If the sibling has children, move its last child into 'child'
+        if len(left_sibling.children) > 0:
+
+            # Grab the last child pointer
+            moved_child = left_sibling.children.pop()
+
+            # Update its parent pointer
+            moved_child.parent = child
+
+            # Add it to the front of the child's children list
+            child.children.insert(0, moved_child)
 
 
 
@@ -717,12 +1185,65 @@ class BTree:
         print()
 
 
-
+    ###############################################################################################
+    # Function: delete
+    # Description:
+    # Deletes the specified key from the B-Tree
+    # Prints a message for the user
+    #
+    # Input:    N/A
+    # Output:   N/A
+    ###############################################################################################
     def delete(self, key):
-        pass
+        """
+        Deletes a specific key from the B-Tree.
 
-    
+        This method performs a user-facing delete operation. It delegates the
+        actual recursive deletion logic to BTreeNode.delete(), which returns either
+        True or False.
 
+        Behaviour:
+            • If the key is deleted:
+                - Display a success message
+
+            • If the key is not deleted:
+                - Displays a message indicating that the key does not exist
+                in the B-Tree.
+
+        Parameters:
+            key (int):
+                The value to delete.
+
+        Returns:
+            None
+                This method does not return anything; it prints the result
+                directly for user feedback.
+        
+        """
+
+        # Delete the provided key
+        result = self.root.delete(key)
+
+        # If root becomes empty and has children
+        if len(self.root.keys) == 0 and len(self.root.children) > 0:
+
+            # Replace the root with its only child
+            self.root = self.root.children[0]
+
+            # Update the new root to have no parent
+            self.root.parent = None
+
+        # If result is true
+        if result:
+
+            # Print a confirmation message
+            print(f'Successfully Deleted key: {key}')
+
+        # Else result is false
+        else:
+
+            # Print a message
+            print(f'Deletion Unsuccessful: Unable to find key {key}')
 
 
 
