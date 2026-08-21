@@ -98,6 +98,14 @@ def normalize(series):
 # Input:    series      A normalized series of voice frequency values
 # Output:   string      A string of SAX letters representing the series
 ###############################################################################################
+###############################################################################################
+# Function: sax_transformation
+# Description:
+# Converts PAA segment means into a SAX letter string.
+#
+# Input:    series      A list of PAA segment means (already normalized)
+# Output:   string      A string of SAX letters representing the series
+###############################################################################################
 def sax_transformation(series):
     """
     Transforms a normalized series into a SAX letter string.
@@ -109,6 +117,20 @@ def sax_transformation(series):
 
     Symbolic Aggregate approXimation (SAX) converts normalized numeric values into symbols
     using breakpoints that divide the Gaussian distribution into equal-sized regions.
+
+    """
+    """
+    Converts PAA segment means into a SAX letter string.
+
+    The function:
+
+        - Maps each PAA mean to a letter ('a'-'e') based on SAX breakpoints.
+        - Combines all letters into a single string.
+
+    Symbolic Aggregate approXimation (SAX) converts normalized numeric values into symbols
+    using breakpoints that divide the Gaussian distribution into equal-sized regions.
+
+    SAX operates on the PAA representation, not the raw or normalized series.
 
     """
 
@@ -155,6 +177,71 @@ def sax_transformation(series):
     # Return the letters
     return letters
 
+
+###############################################################################################
+# Function: paa
+# Description:
+# Breaks a normalized time series into equal-sized segments and 
+# computes the mean of each segment.
+#
+# Input:    series      A normalized series of voice frequency values
+# Output:   list        A list of PAA segment means
+###############################################################################################
+def paa(series, size = 50):
+    """
+    Computes the Piecewise Aggregate Approximation (PAA) of a normalized time series.
+
+    This function:
+        - Divides the normalized series into equal-sized segments.
+        - Computes the mean of each segment.
+        - Returns a list of segment means.
+
+    PAA reduces the dimensionality of the normalized series and prepares it for SAX conversion.
+
+    """
+    # Initialise the segment size
+    segment_size = size
+
+    # Initialise a segment array
+    segments = []
+
+    # Initialise a paa values array
+    paa_values = []
+
+    # Check if the size is too low
+    if segment_size < 3:
+    
+        # Print error message
+        print("Error: this series cannot be split into equal segments")
+    
+        # Return None
+        return None
+
+    # Determine if the series can be split into equal length segments
+    if len(series) % segment_size == 0:
+
+        # Split the series up based on the segment size
+        segments = [series[i:i + segment_size] for i in range(0, len(series), segment_size)]
+
+        # For loop through the segments
+        for seg in segments:
+        
+            # Calculate the segment mean
+            seg_mean = sum(seg) / len(seg)
+        
+            # Append the mean to paa values
+            paa_values.append(seg_mean)
+        
+        # Return the paa values
+        return paa_values
+
+    # Else it can't be split equally
+    else:
+
+        # Recusively call the function trying the size minus 1
+        return paa(series, size = segment_size - 1)
+
+    
 
 
 
