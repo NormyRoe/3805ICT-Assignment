@@ -90,7 +90,70 @@ def normalize(series):
     return series_normalized
 
 
+###############################################################################################
+# Function: sax_transformation
+# Description:
+# Transforms a normalized series into a SAX letter string
+#
+# Input:    series      A normalized series of voice frequency values
+# Output:   string      A string of SAX letters representing the series
+###############################################################################################
+def sax_transformation(series):
+    """
+    Transforms a normalized series into a SAX letter string.
 
+    The function:
+
+        - Maps each normalized value to a letter ('a'-'e') based on SAX breakpoints.
+        - Combines all letters into a single string.
+
+    Symbolic Aggregate approXimation (SAX) converts normalized numeric values into symbols
+    using breakpoints that divide the Gaussian distribution into equal-sized regions.
+
+    """
+
+    # Create a list to hold the letters
+    list_letters = []
+
+    # For loop through the series
+    for s in series:
+
+        # If the value is less than -0.67
+        if s < -0.67:
+
+            # Add 'a' to the list of letters
+            list_letters.append('a')
+
+        # else if the value is between -0.67 and -0.22
+        elif s >= -0.67 and s < -0.22:
+
+            # Add 'b' to the list of letters
+            list_letters.append('b')
+
+
+        # else if the value is between -0.22 and 0.22
+        elif s >= -0.22 and s < 0.22:
+        
+            # Add 'c' to the list of letters
+            list_letters.append('c')
+
+        # else if the value is between 0.22 and 0.67
+        elif s >= 0.22 and s < 0.67:
+                
+            # Add 'd' to the list of letters
+            list_letters.append('d')
+
+        # Else it is greater than 0.67
+        else:
+
+            # Add 'e' to the list of letters
+            list_letters.append('e')
+
+    # Combine the letters in to a string
+    letters = ''.join(list_letters)
+
+    # Return the letters
+    return letters
 
 
 
