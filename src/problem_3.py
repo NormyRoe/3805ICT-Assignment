@@ -80,8 +80,8 @@ def normalize(series):
     # For loop through the series
     for s in series:
 
-        # Caculate it's new value
-        new_value = (s - mean) / std
+        # Caculate it's new value and round to two decimals
+        new_value = round((s - mean) / std, 2)
 
         # Append the new value to the normalized series list
         series_normalized.append(new_value)
@@ -90,14 +90,7 @@ def normalize(series):
     return series_normalized
 
 
-###############################################################################################
-# Function: sax_transformation
-# Description:
-# Transforms a normalized series into a SAX letter string
-#
-# Input:    series      A normalized series of voice frequency values
-# Output:   string      A string of SAX letters representing the series
-###############################################################################################
+
 ###############################################################################################
 # Function: sax_transformation
 # Description:
@@ -107,18 +100,6 @@ def normalize(series):
 # Output:   string      A string of SAX letters representing the series
 ###############################################################################################
 def sax_transformation(series):
-    """
-    Transforms a normalized series into a SAX letter string.
-
-    The function:
-
-        - Maps each normalized value to a letter ('a'-'e') based on SAX breakpoints.
-        - Combines all letters into a single string.
-
-    Symbolic Aggregate approXimation (SAX) converts normalized numeric values into symbols
-    using breakpoints that divide the Gaussian distribution into equal-sized regions.
-
-    """
     """
     Converts PAA segment means into a SAX letter string.
 
@@ -187,7 +168,7 @@ def sax_transformation(series):
 # Input:    series      A normalized series of voice frequency values
 # Output:   list        A list of PAA segment means
 ###############################################################################################
-def paa(series, size = 50):
+def paa(series, size = 100):
     """
     Computes the Piecewise Aggregate Approximation (PAA) of a normalized time series.
 
@@ -211,14 +192,11 @@ def paa(series, size = 50):
     # Check if the size is too low
     if segment_size < 3:
     
-        # Print error message
-        print("Error: this series cannot be split into equal segments")
-    
         # Return None
         return None
 
     # Determine if the series can be split into equal length segments
-    if len(series) % segment_size == 0:
+    if len(series) % segment_size == 0 and len(series) != segment_size:
 
         # Split the series up based on the segment size
         segments = [series[i:i + segment_size] for i in range(0, len(series), segment_size)]
@@ -227,7 +205,7 @@ def paa(series, size = 50):
         for seg in segments:
         
             # Calculate the segment mean
-            seg_mean = sum(seg) / len(seg)
+            seg_mean = round(sum(seg) / len(seg), 2)
         
             # Append the mean to paa values
             paa_values.append(seg_mean)
@@ -238,11 +216,157 @@ def paa(series, size = 50):
     # Else it can't be split equally
     else:
 
-        # Recusively call the function trying the size minus 1
-        return paa(series, size = segment_size - 1)
+        # If the size of the series is the same as the segment size
+        if len(series) == segment_size:
+
+            # Recursively call the function trying the size minus 1
+            return paa(series, size = segment_size - 1)
+
+        # Else If the segment_size is over 50
+        elif segment_size > 50:
+
+            # Recursively call the function trying the size minus 10
+            return paa(series, size = segment_size - 10)
+
+        # Else if the segment size is greater than 20 and less than or equal to 50
+        elif segment_size > 20 and segment_size <= 50:
+
+            # Recursively call the function trying the size minus 10
+            return paa(series, size = segment_size - 5)
+        
+        # Else the segment_size is 20 or under
+        else:
+
+            # Recursively call the function trying the size minus 1
+            return paa(series, size = segment_size - 1)
+
+
+###############################################################################################
+# Function: lcs
+# Description:
+# Returns the length of the Longest Common Subsequence between s1 and s2
+#
+# Input:    string      The first string of letters to compare
+#           string      The second string of letters to compare
+# Output:   string        A list of PAA segment means
+###############################################################################################
+def lcs(s1, s2):
+    """
+    Returns the length of the Longest Common Subsequence between s1 and s2.
+
+    This function:
+        - 
 
     
 
+    """
+
+
+
+
+###############################################################################################
+# Function: perform_sax
+# Description:
+# Performs Symbolic Aggregate approXimation (SAX) to compare two voice time series
+#
+# Input:    series      The authorised voice time series
+#           series      The test voice time series
+# Output:   N/A
+###############################################################################################
+def perform_sax(authorized, test):
+    """
+    Performs Symbolic Aggregate approXimation (SAX) to compare two voice time series
+
+    This function:
+        - Performs z-score normalization on each series of voice numbers
+        - Computes the Piecewise Aggregate Approximation (PAA) of each normalized time series.
+        - Transforms each PAA series into a SAX letter string.
+   
+
+    """
+    # Print the input voice series
+    print("Input:\n")
+    print("Authorized Voice Series:")
+    print(authorized)
+    print("Test Voice Series:")
+    print(test)
+
+    # Normalize the authorized voice time series
+    normalized_authorized = normalize(authorized)
+
+    # Normalize the test voice time series
+    normalized_test = normalize(test)
+
+    # Print the process and step 1
+    print("\nProcess:\n")
+    print("Step 1 - Normalize voice series:\n")
+
+    # Print the normalized voice series
+    print("Authorized Voice Normalized:")
+    print(normalized_authorized)
+    print("Test Voice Normalized:")
+    print(normalized_test)
+
+    # Compute PAA for the authorized voice time series
+    paa_authorized = paa(normalized_authorized)
+
+    # Compute PAA for the test voice time series
+    paa_test = paa(normalized_test)
+
+    # Print step 2
+    print("\nStep 2 - Compute PAA:\n")
+
+    # Check the scenarios
+    # If both paa variables are None
+    if paa_authorized is None and paa_test is None:
+
+        # Print error message
+        print("Error: Neither series can be split into equal segments")
+
+        # Return out of function
+        return
+
+    # Else if paa_authorized is None
+    elif paa_authorized is None:
+
+        # Print error message
+        print("Error: Authorized series cannot be split into equal segments")
+        
+        # Return out of function
+        return
+
+    # Else if paa_test is None
+    elif paa_test is None:
+
+        # Print error message
+        print("Error: Test series cannot be split into equal segments")
+                
+        # Return out of function
+        return
+
+    # Else both series have been successfully split
+    else:
+
+        # Print the PAA series
+        print("Authorized Voice PAA:")
+        print(paa_authorized)
+        print("Test Voice PAA:")
+        print(paa_test)
+
+        # Perform SAX conversion on the Authorized PAA
+        sax_authorized = sax_transformation(paa_authorized)
+
+        # Perform SAX conversion on the Test PAA
+        sax_test = sax_transformation(paa_test)
+
+        # Print step 3
+        print("\nStep 3 - SAX Conversion:\n")
+
+        # Print the SAX patterns
+        print("Authorized Voice Pattern:")
+        print(sax_authorized)
+        print("Test Voice Pattern:")
+        print(sax_test)
 
 
 
@@ -264,6 +388,15 @@ def problem_3():
             - 
     """
     print("Program started.\n")
+
+    # Create authorized voice and test voice time series
+    voice_authorized = [135.3, 138.1, 140.5, 143.0, 146.0, 148.8, 151.0, 153.4, 155.6, 158.0]
+    voice_test = [133.2, 137.5, 141.2, 144.0, 146.3, 149.5, 151.2, 153.3, 155.7, 157.5]
+
+    # Perform SAX
+    perform_sax(voice_authorized, voice_test)
+
+
 
 
 
