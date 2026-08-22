@@ -366,16 +366,16 @@ def similarity_classify(sax_test, lcs_string):
     # Calculate the similarity percentage
     score_percent = score_sim * 100
 
-    # Print step 4
-    print("\nStep 4 - Calculate Similarity Score:\n")
+    # Print step 5
+    print("\nStep 5 - Calculate Similarity Score:\n")
 
     # Print the similarity score
     print("Similarity Score:")
     print(f'{length_lcs}/{length_test} = {score_sim} ({score_percent}%)')
 
 
-    # Print step 4
-    print("\nStep 5 - Matching Result:\n")
+    # Print step 6
+    print("\nStep 6 - Matching Result:\n")
 
     # Print the similarity score
     print("Match Result:")
@@ -536,11 +536,17 @@ def perform_sax(authorized, test):
 ###############################################################################################
 def problem_3():
     """
-        main.py
-        Entry point for the assignment.
+    Entry point for Problem 3.
 
-        The function:
-            - 
+    The function:
+        - Creates an Authorized Voice time series
+        - Creates a Test Voice time series
+        - Performs Symbolic Aggregate approXimation (SAX)
+
+    SAX is used to transform a time series into a symbolic representation.  
+    This representation is then used with Longest Common Subsequence to compare SAX patterns 
+    and determine whether they match.
+    
     """
     print("Program started.\n")
 
