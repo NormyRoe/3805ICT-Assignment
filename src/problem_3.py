@@ -416,9 +416,9 @@ def perform_sax(authorized, test):
     # Print the input voice series
     print("Input:\n")
     print("Authorized Voice Series:")
-    print(authorized)
+    print(f'Length is {len(authorized)}')
     print("Test Voice Series:")
-    print(test)
+    print(f'Length is {len(test)}')
 
     # Start a timer
     start_time = time.perf_counter()
@@ -438,9 +438,9 @@ def perform_sax(authorized, test):
 
     # Print the normalized voice series
     print("Authorized Voice Normalized:")
-    print(normalized_authorized)
+    print(f'Length is {len(normalized_authorized)}')
     print("Test Voice Normalized:")
-    print(normalized_test)
+    print(f'Length is {len(normalized_test)}')
 
     # Compute PAA for the authorized voice time series
     paa_authorized = paa(normalized_authorized)
@@ -546,7 +546,7 @@ def problem_3():
     SAX is used to transform a time series into a symbolic representation.  
     This representation is then used with Longest Common Subsequence to compare SAX patterns 
     and determine whether they match.
-    
+
     """
     print("Program started.\n")
 
