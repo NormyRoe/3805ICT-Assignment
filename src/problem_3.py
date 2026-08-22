@@ -1,10 +1,8 @@
 
-
 ###############################################################################################
 # Imports
 #
 ###############################################################################################
-import math
 import time
 import tracemalloc
 
@@ -244,24 +242,155 @@ def paa(series, size = 100):
 ###############################################################################################
 # Function: lcs
 # Description:
-# Returns the length of the Longest Common Subsequence between s1 and s2
+# Returns the Longest Common Subsequence between s1 and s2
 #
 # Input:    string      The first string of letters to compare
 #           string      The second string of letters to compare
-# Output:   string        A list of PAA segment means
+# Output:   string      The longest common subsequence
+#
+# Notes:    Uses dynamic programming to compute the LCS table and then 
+#           reconstructs the subsequence.
 ###############################################################################################
 def lcs(s1, s2):
     """
-    Returns the length of the Longest Common Subsequence between s1 and s2.
+    Computes the Longest Common Subsequence (LCS) between two SAX strings.
 
-    This function:
-        - 
+    The function:
+        - Builds a dynamic programming (DP) table storing LCS lengths.
+        - Walks backwards through the DP table to reconstruct the actual subsequence.
+        - Returns the LCS as a string.
 
-    
+    LCS is used to measure similarity between two SAX patterns.
 
     """
 
+    # Store the lengths of both strings
+    n = len(s1)
+    m = len(s2)
 
+    # Create a DP table filled with zeros
+    dp = [[0] * (m + 1) for _ in range(n + 1)]
+
+    # Fill the DP table
+    # For loop through s1
+    for i in range(1, n + 1):
+
+        # For loop through s2
+        for j in range(1, m + 1):
+
+            # If the characters match
+            if s1[i - 1] == s2[j - 1]:
+
+                # Extend the subsequence
+                dp[i][j] = dp[i - 1][j - 1] + 1
+
+            # Else
+            else:
+
+                # Best is max of ignoring one char from either string 
+                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+
+    # Reconstruct the subsequence
+    # Create an array to hold the letters
+    lcs_letters = []
+
+    # Walk backwards through the DP table
+    # While n and m are greater than zero
+    while n > 0 and m > 0:
+
+        # If the characters match
+        if s1[n - 1] == s2[m - 1]:
+
+            # Append the character to the lcs letters array
+            lcs_letters.append(s1[n - 1])
+
+            # Decrease n and m
+            n -= 1
+            m -= 1
+
+        # Else move in the direction of the larger DP value
+
+        # Else if the DP value above is larger, move upward 
+        # (skip a character from s1)
+        elif dp[n - 1][m] >= dp[n][m - 1]:
+
+            # Decrease n by 1 to move up
+            n -= 1
+
+        # Else move to the left (skip a character from s2)
+        else:
+
+            # Decrease m by 1 to move left
+            m -= 1
+
+    # Reverse the collected letters to get the correct LCS subsequence order
+    lcs_letters.reverse()
+
+    # Create the LCS string
+    lcs_string = ''.join(lcs_letters)
+
+    # Return the LCS string
+    return lcs_string
+
+
+
+###############################################################################################
+# Function: similarity_classify
+# Description:
+# Calculates and Classifies the similarity score for the Test Voice
+# This is used to determine whether the Test Voice is matched to the Authorized Voice.
+#
+# Input:    string      The Test Voice pattern
+#           string      The LCS string
+# Output:   N/A
+#
+###############################################################################################
+def similarity_classify(sax_test, lcs_string):
+    """
+    Calculates and Classifies the similarity score for the Test Voice.
+    This is used to determine whether the Test Voice is a match to the Authorized Voice.
+
+    The function:
+        - Calculates the similarity score for the Test Voice.
+        - Determines whether the Test Voice is matched to the Authorized Voice.   
+
+    """
+
+    # Create variables for the length of the provided strings
+    length_test = len(sax_test)
+    length_lcs = len(lcs_string)
+
+    # Calculate the similarity score rounded to two decimals
+    score_sim = round(length_lcs / length_test, 2)
+
+    # Calculate the similarity percentage
+    score_percent = score_sim * 100
+
+    # Print step 4
+    print("\nStep 4 - Calculate Similarity Score:\n")
+
+    # Print the similarity score
+    print("Similarity Score:")
+    print(f'{length_lcs}/{length_test} = {score_sim} ({score_percent}%)')
+
+
+    # Print step 4
+    print("\nStep 5 - Matching Result:\n")
+
+    # Print the similarity score
+    print("Match Result:")
+    # Classify the Similarity Score
+    # If the percentage is 75 or higher
+    if score_percent >= 75:
+
+        # Print match message
+        print("Test Voice is a MATCH for the Authorized Voice")
+
+    # Else percentage is lower than 75
+    else:
+
+        # Print no match message
+        print("Test Voice is NOT A MATCH for the Authorized Voice")
 
 
 ###############################################################################################
@@ -290,6 +419,12 @@ def perform_sax(authorized, test):
     print(authorized)
     print("Test Voice Series:")
     print(test)
+
+    # Start a timer
+    start_time = time.perf_counter()
+    
+    # Start memory allocation tracing
+    tracemalloc.start()
 
     # Normalize the authorized voice time series
     normalized_authorized = normalize(authorized)
@@ -323,26 +458,17 @@ def perform_sax(authorized, test):
         # Print error message
         print("Error: Neither series can be split into equal segments")
 
-        # Return out of function
-        return
-
     # Else if paa_authorized is None
     elif paa_authorized is None:
 
         # Print error message
         print("Error: Authorized series cannot be split into equal segments")
-        
-        # Return out of function
-        return
 
     # Else if paa_test is None
     elif paa_test is None:
 
         # Print error message
         print("Error: Test series cannot be split into equal segments")
-                
-        # Return out of function
-        return
 
     # Else both series have been successfully split
     else:
@@ -367,6 +493,35 @@ def perform_sax(authorized, test):
         print(sax_authorized)
         print("Test Voice Pattern:")
         print(sax_test)
+
+        # Caculate LCS
+        lcs_string = lcs(sax_authorized, sax_test)
+
+        # Print step 4
+        print("\nStep 4 - Calculate LCS:\n")
+
+        # Print the LCS string
+        print("LCS:")
+        print(f'{lcs_string} ({len(lcs_string)} characters match)')
+
+        # Calculate similarity and matching
+        similarity_classify(sax_test, lcs_string)
+
+    # End the timer
+    end_time = time.perf_counter()
+    
+    # Get the current and peak memory allocation
+    memory_current, memory_peak = tracemalloc.get_traced_memory()
+    
+    # Stop memory allocation tracing
+    tracemalloc.stop()
+
+    # Calculate the length of time it took in milliseconds
+    total_time = (end_time - start_time) * 1000
+
+    # Print the time and memory stats
+    print(f'\nTotal time: {total_time:.4f} ms')
+    print(f'Total memory: {memory_peak} bytes')
 
 
 
