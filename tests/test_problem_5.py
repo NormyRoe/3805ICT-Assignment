@@ -1,6 +1,6 @@
 """
 test_main.py
-Pytest file for testing the Assignment's Problem 3.
+Pytest file for testing the Assignment's Problem 5.
 """
 
 from src.problem_5 import run_algorithms

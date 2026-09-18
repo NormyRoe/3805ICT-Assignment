@@ -3,9 +3,9 @@
 # Imports
 #
 ###############################################################################################
-import math
 import time
 import tracemalloc
+import pulp
 
 
 ###############################################################################################
@@ -51,7 +51,7 @@ def possible_tax_deductions():
 # Output:   dictionary      The dynamic programming solution containing:
 #                           - total_cost
 #                           - total_benefit
-#                           - chosen (dictionary of all deductions with Implement/Cost/Benefit)
+#                           - deductions (dictionary of all deductions with Implement/Cost/Benefit)
 ###############################################################################################
 def solve_dp_top_down(budget, tax_deductions, names, index, memo = None):
     """
@@ -193,28 +193,25 @@ def solve_dp_top_down(budget, tax_deductions, names, index, memo = None):
 
 
 ###############################################################################################
-# Function: print_dp_solution
+# Function: print_solution
 # Description:
-# Prints the dynamic programming solution in a clear, readable format in the 
+# Prints the solution in a clear, readable format in the 
 # correct (original) deduction order.
 #
 # Input:    integer         The maximum budget
-#           dictionary      The dynamic programming solution returned by dynamic_programming()
+#           dictionary      The solution returned by dynamic_programming() or linear_programming()
 #           list            The list of deduction names (original order)
 #
 # Output:   N/A             (Prints the solution to the console)
 ###############################################################################################
-def print_dp_solution(budget, solution, names):
+def print_solution(budget, solution, names):
     """
-    Print the dynamic programming solution in a readable format.
+    Print the solution in a readable format, preserving the original deduction order.
 
     """
 
     # Print the maximum budget
     print(f"Maximum Budget: ${budget}B\n")
-
-    # Print the header
-    print("Dynamic Programming Solution:\n")
 
     # Get the deductions dictionary
     deductions = solution["deductions"]
@@ -248,23 +245,229 @@ def dynamic_programming(budget):
     Gets the possible tax deducations and then calls the solve_dp_top_down function
 
     """
+
+    # Print the Header
+    print("Dynamic Programming Solution:\n")
+
     # Get the possible tax deductions
     tax_deductions = possible_tax_deductions()
 
     # Create a list of deduction names
     names = list(tax_deductions.keys())
 
+    # Start a timer
+    start_time = time.perf_counter()
+        
+    # Start memory allocation tracing
+    tracemalloc.start()
+    
     # Call the top-down solver starting at index 0
     solution = solve_dp_top_down(budget, tax_deductions, names, 0)
+    
+    # End the timer
+    end_time = time.perf_counter()
+        
+    # Get the current and peak memory allocation
+    memory_current, memory_peak = tracemalloc.get_traced_memory()
+        
+    # Stop memory allocation tracing
+    tracemalloc.stop()
+    
+    # Calculate the length of time it took in milliseconds
+    total_time = (end_time - start_time) * 1000
+ 
+    # Print the time
+    print(f"Time DP took: {total_time:.4f} ms ")
+        
+    # Print the memory usage
+    print(f"DP had a peak memory usage of: {memory_peak} bytes\n")
 
     # Print the solution
-    print_dp_solution(budget, solution, names)
+    print_solution(budget, solution, names)
 
     # Return the solution
     return solution
 
 
+###############################################################################################
+# Function: solve_lp
+# Description:
+# Uses Linear Programming (PuLP) to determine which tax deductions should be implemented
+# to maximise economic benefit while staying within the budget.
+#
+# Input:    integer         The maximum budget
+#           dictionary      The dictionary containing the possible tax deductions
+#           list            The list of deduction names (stable ordering)
+#
+# Output:   dictionary      The LP solution containing:
+#                           - total_cost
+#                           - total_benefit
+#                           - deductions (dictionary of all deductions with Implement/Cost/Benefit)
+###############################################################################################
+def solve_lp(budget, tax_deductions, names):
+    """
+    Return the linear programming solution for the tax deduction problem.
+    """
 
+    # ---------------------------------------------------------------------------------
+    # CREATE THE LP PROBLEM
+    # ---------------------------------------------------------------------------------
+    # Create a maximisation problem
+    lp_problem = pulp.LpProblem("Tax_Deduction_Optimisation", pulp.LpMaximize)
+
+    # ---------------------------------------------------------------------------------
+    # CREATE DECISION VARIABLES
+    # ---------------------------------------------------------------------------------
+    # For each deduction, create a binary variable:
+    # 1 = Implement the deduction
+    # 0 = Do not implement the deduction
+    x = {name: pulp.LpVariable(name, lowBound=0, upBound=1, cat=pulp.LpBinary)
+         for name in names}
+
+    # ---------------------------------------------------------------------------------
+    # OBJECTIVE FUNCTION:
+    # Maximise total benefit
+    # ---------------------------------------------------------------------------------
+    lp_problem += pulp.lpSum([tax_deductions[name]["benefit"] * x[name] for name in names])
+
+    # ---------------------------------------------------------------------------------
+    # BUDGET CONSTRAINT:
+    # Total cost must not exceed the budget
+    # ---------------------------------------------------------------------------------
+    lp_problem += pulp.lpSum([tax_deductions[name]["cost"] * x[name] for name in names]) <= budget
+
+    # ---------------------------------------------------------------------------------
+    # SOLVE THE LP PROBLEM
+    # ---------------------------------------------------------------------------------
+    lp_problem.solve()
+
+    status = pulp.LpStatus[lp_problem.status]
+
+    if status != "Optimal":
+
+        print(f"Warning: LP solver returned status '{status}'")
+
+    # ---------------------------------------------------------------------------------
+    # BUILD THE SOLUTION DICTIONARY (MATCHES DP FORMAT)
+    # ---------------------------------------------------------------------------------
+    solution = {
+        "total_cost": 0,
+        "total_benefit": 0,
+        "deductions": {}
+    }
+
+    # Loop through each deduction and extract the LP decision
+    for name in names:
+
+        implemented = int(pulp.value(x[name]))  # 1 or 0
+
+        cost = tax_deductions[name]["cost"] if implemented else 0
+
+        benefit = tax_deductions[name]["benefit"] if implemented else 0
+
+        # Add to the solution dictionary
+        solution["deductions"][name] = {
+            "Implement": "Implemented" if implemented else "Not Implemented",
+            "Cost": cost,
+            "Benefit": benefit
+        }
+
+        # Update totals
+        solution["total_cost"] += cost
+
+        solution["total_benefit"] += benefit
+
+    # Return the LP solution
+    return solution
+
+
+###############################################################################################
+# Function: linear_programming
+# Description:
+# Wrapper function that prepares the deduction list and calls the LP solver.
+#
+# Input:    integer         The maximum budget
+# Output:   dictionary      The LP solution
+###############################################################################################
+def linear_programming(budget):
+    """
+    Return the linear programming solution.
+
+    Gets the possible tax deductions and then calls the solve_lp function.
+    """
+
+    # Print the Header
+    print("\nLinear Programming Solution:\n")
+
+    # Get the possible tax deductions
+    tax_deductions = possible_tax_deductions()
+
+    # Create a list of deduction names
+    names = list(tax_deductions.keys())
+
+    # Start a timer
+    start_time = time.perf_counter()
+            
+    # Start memory allocation tracing
+    tracemalloc.start()
+        
+    # Solve using LP
+    solution = solve_lp(budget, tax_deductions, names)
+        
+    # End the timer
+    end_time = time.perf_counter()
+            
+    # Get the current and peak memory allocation
+    memory_current, memory_peak = tracemalloc.get_traced_memory()
+            
+    # Stop memory allocation tracing
+    tracemalloc.stop()
+        
+    # Calculate the length of time it took in milliseconds
+    total_time = (end_time - start_time) * 1000
+    
+    # Print the time
+    print(f"Time LP took: {total_time:.4f} ms ")
+            
+    # Print the memory usage
+    print(f"LP had a peak memory usage of: {memory_peak} bytes\n")
+
+    # Print the solution
+    print_solution(budget, solution, names)
+
+    return solution
+
+
+###############################################################################################
+# Function: run_programming
+# Description:
+# Wrapper function that runs each of the programming functions, one after the other 
+# with the same provided budget.
+#
+# Input:    integer         The maximum budget
+# Output:   N/A
+###############################################################################################
+def run_programming(budget):
+    """
+    Runs the dynamic programming function and then the linear programming function, 
+    with the same budget.
+
+    """
+    # Validate that the budget is a number
+    # If budget is not an integer or a float
+    if not isinstance(budget, (int, float)):
+
+        # Print an error message
+        print("Error: Budget must be a numeric value.\n")
+
+        # Return out of the program
+        return
+    
+    # Run the dynamic programming
+    dp_solution = dynamic_programming(budget)
+    
+    # Run the linear programming
+    lp_solution = linear_programming(budget)
 
 
 ###############################################################################################
@@ -278,17 +481,17 @@ def dynamic_programming(budget):
 ###############################################################################################
 def problem_4():
     """
-    Entry point for Problem 5.
+    Entry point for Problem 4.
 
         The function:
-            - Calls the dynamic_programming function with a budget amount
+            - Calls the run_programming function with a budget amount
 
     """
 
     print("Program started.\n")
 
-    # Runs the dynamic programming
-    solution = dynamic_programming(200)
+    # Run the programming
+    run_programming(200)
 
     
 
