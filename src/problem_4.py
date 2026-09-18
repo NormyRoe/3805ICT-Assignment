@@ -227,7 +227,8 @@ def print_solution(budget, solution, names):
 
     # Print the totals
     print(f"\nTotal cost: ${solution['total_cost']}B")
-    print(f"Total benefit: ${solution['total_benefit']}B\n")
+    print(f"Total benefit: ${solution['total_benefit']}B")
+    print(f"Remaining Budget: ${budget - solution['total_cost']}B\n")
 
 
 ###############################################################################################
@@ -339,7 +340,7 @@ def solve_lp(budget, tax_deductions, names):
     # ---------------------------------------------------------------------------------
     # SOLVE THE LP PROBLEM
     # ---------------------------------------------------------------------------------
-    lp_problem.solve()
+    lp_problem.solve(pulp.PULP_CBC_CMD(msg=False))
 
     status = pulp.LpStatus[lp_problem.status]
 
